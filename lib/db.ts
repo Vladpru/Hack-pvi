@@ -117,7 +117,7 @@ export async function initDb(): Promise<void> {
 
   // Seed if empty
   const { rows } = await db.execute('SELECT COUNT(*) as count FROM warehouses')
-  const count = Number((rows[0] as { count: number }).count)
+  const count = Number((rows[0] as unknown as { count: number }).count)
   if (count > 0) { initialized = true; return }
 
   await db.executeMultiple(`

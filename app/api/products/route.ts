@@ -26,7 +26,7 @@ export async function POST(req: Request) {
       sql: `INSERT INTO products (name, sku, unit, category) VALUES (?, ?, ?, ?)`,
       args: [name, sku, unit ?? 'pcs', category ?? 'General'],
     })
-    const { rows } = await db.execute({ sql: 'SELECT * FROM products WHERE id = ?', args: [result.lastInsertRowid] })
+    const { rows } = await db.execute({ sql: 'SELECT * FROM products WHERE id = ?', args: [Number(result.lastInsertRowid)] })
     return NextResponse.json(rows[0], { status: 201 })
   } catch {
     return NextResponse.json({ error: 'SKU already exists' }, { status: 409 })

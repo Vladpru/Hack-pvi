@@ -28,7 +28,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { status, priority, warehouse_id, notes } = body
 
   const { rows: reqRows } = await db.execute({ sql: 'SELECT * FROM requests WHERE id = ?', args: [id] })
-  const request = reqRows[0] as {
+  const request = reqRows[0] as unknown as {
     id: number; product_id: number; warehouse_id: number; quantity: number; status: string
   } | undefined
   if (!request) return NextResponse.json({ error: 'Not found' }, { status: 404 })

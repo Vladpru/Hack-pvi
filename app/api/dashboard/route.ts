@@ -78,12 +78,12 @@ export async function GET() {
 
   return NextResponse.json({
     stats: {
-      totalWarehouses: Number((r1[0] as { c: number }).c),
-      totalProducts: Number((r2[0] as { c: number }).c),
-      totalDeliveryPoints: Number((r3[0] as { c: number }).c),
-      pendingRequests: Number((r4[0] as { c: number }).c),
-      criticalRequests: Number((r5[0] as { c: number }).c),
-      unreadAlerts: Number((r6[0] as { c: number }).c),
+      totalWarehouses: Number((r1[0] as unknown as { c: number }).c),
+      totalProducts: Number((r2[0] as unknown as { c: number }).c),
+      totalDeliveryPoints: Number((r3[0] as unknown as { c: number }).c),
+      pendingRequests: Number((r4[0] as unknown as { c: number }).c),
+      criticalRequests: Number((r5[0] as unknown as { c: number }).c),
+      unreadAlerts: Number((r6[0] as unknown as { c: number }).c),
     },
     lowStockItems,
     recentRequests,

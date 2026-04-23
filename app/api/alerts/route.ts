@@ -37,6 +37,6 @@ export async function POST(req: Request) {
           VALUES (?, ?, ?, ?, ?, 0)`,
     args: [type, message, warehouse_id ?? null, product_id ?? null, severity ?? 'info'],
   })
-  const { rows } = await db.execute({ sql: 'SELECT * FROM alerts WHERE id = ?', args: [result.lastInsertRowid] })
+  const { rows } = await db.execute({ sql: 'SELECT * FROM alerts WHERE id = ?', args: [Number(result.lastInsertRowid)] })
   return NextResponse.json(rows[0], { status: 201 })
 }

@@ -7,7 +7,7 @@ export async function POST() {
   await initDb()
   const db = getDb()
 
-  const { rows: pendingRequests } = await db.execute(`
+  const { rows: rawPending } = await db.execute(`
     SELECT r.*, p.name as product_name, p.unit,
            w.name as warehouse_name,
            dp.name as delivery_point_name,
@@ -19,17 +19,17 @@ export async function POST() {
     LEFT JOIN inventory i ON i.warehouse_id = r.warehouse_id AND i.product_id = r.product_id
     WHERE r.status IN ('pending')
     ORDER BY CASE r.priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 ELSE 3 END, r.created_at ASC
-  `) as {
-    rows: Array<{
-      id: number; product_id: number; warehouse_id: number | null; quantity: number;
-      priority: string; product_name: string; unit: string; warehouse_name: string | null;
-      delivery_point_name: string | null; available_stock: number | null
-    }>
-  }
+  `)
+  const pendingRequests = rawPending as unknown as Array<{
+    id: number; product_id: number; warehouse_id: number | null; quantity: number;
+    priority: string; product_name: string; unit: string; warehouse_name: string | null;
+    delivery_point_name: string | null; available_stock: number | null
+  }>
 
-  const { rows: allInventory } = await db.execute(
+  const { rows: rawInventory } = await db.execute(
     'SELECT warehouse_id, product_id, quantity FROM inventory'
-  ) as { rows: Array<{ warehouse_id: number; product_id: number; quantity: number }> }
+  )
+  const allInventory = rawInventory as unknown as Array<{ warehouse_id: number; product_id: number; quantity: number }>
 
   // Build mutable stock snapshot
   const stockMap: Record<string, number> = {}
@@ -62,20 +62,20 @@ export async function POST() {
         sql: `UPDATE requests SET status = 'approved', updated_at = datetime('now') WHERE id = ? AND status = 'pending'`,
         args: [req.id],
       })
-      // Log
       await db.execute({
         sql: `INSERT INTO audit_log (action, entity, entity_id, details) VALUES ('auto_approved', 'request', ?, ?)`,
         args: [req.id, JSON.stringify({ qty, warehouse_id: req.warehouse_id, product_id: req.product_id })],
       })
     } else {
-      // Try alternate warehouse — sorted by proximity if delivery_point coords available
-      const { rows: altRows } = await db.execute({
+      // Try alternate warehouse
+      const { rows: rawAlt } = await db.execute({
         sql: `SELECT i.warehouse_id, i.quantity, w.name as warehouse_name, w.lat, w.lng
               FROM inventory i JOIN warehouses w ON w.id = i.warehouse_id
               WHERE i.product_id = ? AND i.quantity >= ? AND i.warehouse_id != ?
               ORDER BY i.quantity DESC LIMIT 5`,
         args: [req.product_id, qty, req.warehouse_id ?? 0],
-      }) as { rows: Array<{ warehouse_id: number; quantity: number; warehouse_name: string; lat: number; lng: number }> }
+      })
+      const altRows = rawAlt as unknown as Array<{ warehouse_id: number; quantity: number; warehouse_name: string; lat: number; lng: number }>
 
       const alt = altRows[0]
       if (alt) {
