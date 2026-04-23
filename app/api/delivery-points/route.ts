@@ -19,6 +19,6 @@ export async function POST(req: Request) {
     sql: `INSERT INTO delivery_points (name, address, lat, lng, contact) VALUES (?, ?, ?, ?, ?)`,
     args: [name, address, lat ?? 0, lng ?? 0, contact ?? null],
   })
-  const { rows } = await db.execute({ sql: 'SELECT * FROM delivery_points WHERE id = ?', args: [result.lastInsertRowid] })
+  const { rows } = await db.execute({ sql: 'SELECT * FROM delivery_points WHERE id = ?', args: [Number(result.lastInsertRowid)] })
   return NextResponse.json(rows[0], { status: 201 })
 }

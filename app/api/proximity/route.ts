@@ -21,9 +21,8 @@ export async function GET(req: Request) {
   const productId = searchParams.get('product_id')
   const minQuantity = parseInt(searchParams.get('min_quantity') ?? '0')
 
-  const { rows: warehouses } = await db.execute('SELECT * FROM warehouses') as {
-    rows: Array<{ id: number; name: string; location: string; lat: number; lng: number; capacity: number }>
-  }
+  const { rows: warehouseRows } = await db.execute('SELECT * FROM warehouses')
+  const warehouses = warehouseRows as unknown as Array<{ id: number; name: string; location: string; lat: number; lng: number; capacity: number }>
 
   const nearby = warehouses
     .map(w => ({ ...w, distance_km: Math.round(haversine(lat, lng, Number(w.lat), Number(w.lng)) * 10) / 10 }))

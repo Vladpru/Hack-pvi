@@ -2,21 +2,23 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   LayoutDashboard, Warehouse, Package, ClipboardList,
-  MapPin, Bell, Menu, X, Truck, RefreshCw,
+  MapPin, Bell, Menu, X, Truck, Search, BarChart2, Tag,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/analytics', label: 'Analytics', icon: BarChart2 },
   { href: '/warehouses', label: 'Warehouses', icon: Warehouse },
   { href: '/inventory', label: 'Inventory', icon: Package },
+  { href: '/products', label: 'Products', icon: Tag },
   { href: '/requests', label: 'Requests', icon: ClipboardList },
   { href: '/delivery-points', label: 'Delivery Points', icon: MapPin },
   { href: '/alerts', label: 'Alerts', icon: Bell },
-  { href: '/proximity', label: 'Proximity Search', icon: RefreshCw },
+  { href: '/proximity', label: 'Proximity Search', icon: Search },
 ]
 
 export function SidebarNav() {
@@ -24,12 +26,19 @@ export function SidebarNav() {
   const [open, setOpen] = useState(false)
   const [alertCount, setAlertCount] = useState(0)
 
-  useEffect(() => {
+  const fetchAlerts = useCallback(() => {
     fetch('/api/alerts?unread=true')
       .then(r => r.json())
       .then(data => setAlertCount(Array.isArray(data) ? data.length : 0))
       .catch(() => {})
-  }, [pathname])
+  }, [])
+
+  useEffect(() => {
+    fetchAlerts()
+    // Poll every 30s for new alerts
+    const interval = setInterval(fetchAlerts, 30_000)
+    return () => clearInterval(interval)
+  }, [pathname, fetchAlerts])
 
   return (
     <>
@@ -39,13 +48,23 @@ export function SidebarNav() {
           <Truck className="w-5 h-5 text-primary" />
           <span className="font-semibold text-sm text-foreground tracking-wide">LogiFlow</span>
         </div>
-        <button
-          onClick={() => setOpen(!open)}
-          className="p-2 rounded-md text-muted-foreground hover:text-foreground transition-colors"
-          aria-label="Toggle menu"
-        >
-          {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        <div className="flex items-center gap-2">
+          {alertCount > 0 && (
+            <Link href="/alerts" className="relative p-2">
+              <Bell className="w-5 h-5 text-muted-foreground" />
+              <span className="absolute top-1 right-1 flex items-center justify-center min-w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-xs font-bold px-0.5">
+                {alertCount > 9 ? '9+' : alertCount}
+              </span>
+            </Link>
+          )}
+          <button
+            onClick={() => setOpen(!open)}
+            className="p-2 rounded-md text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Toggle menu"
+          >
+            {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile overlay */}
@@ -106,7 +125,10 @@ export function SidebarNav() {
 
         {/* Footer */}
         <div className="px-5 py-4 border-t border-border shrink-0">
-          <p className="text-xs text-muted-foreground">v1.0.0 &mdash; Production</p>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <p className="text-xs text-muted-foreground">Live &mdash; v1.1.0</p>
+          </div>
         </div>
       </aside>
 

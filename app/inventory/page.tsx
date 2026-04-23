@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Package, AlertTriangle, Filter, Plus, X } from 'lucide-react'
+import { Package, AlertTriangle, Filter, Plus, X, Download } from 'lucide-react'
 
 interface InventoryItem {
   id: number
@@ -82,6 +82,29 @@ export default function InventoryPage() {
     if (res.ok) { setEditId(null); load() }
   }
 
+  const handleExportCsv = () => {
+    const headers = ['Product', 'SKU', 'Category', 'Warehouse', 'Quantity', 'Unit', 'Min Threshold', 'Status', 'Last Updated']
+    const rows = items.map(i => [
+      `"${i.product_name}"`,
+      i.sku,
+      i.category,
+      `"${i.warehouse_name}"`,
+      i.quantity,
+      i.unit,
+      i.min_threshold,
+      i.quantity < i.min_threshold * 0.5 ? 'Critical' : i.quantity < i.min_threshold ? 'Low' : 'OK',
+      i.updated_at,
+    ])
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `inventory-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const lowCount = items.filter(i => i.quantity < i.min_threshold).length
 
   return (
@@ -100,13 +123,24 @@ export default function InventoryPage() {
             )}
           </p>
         </div>
-        <button
-          onClick={() => setShowForm(v => !v)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-          {showForm ? 'Cancel' : 'Add / Update Stock'}
-        </button>
+        <div className="flex items-center gap-2">
+          {items.length > 0 && (
+            <button
+              onClick={handleExportCsv}
+              className="flex items-center gap-2 px-4 py-2.5 bg-secondary border border-border text-muted-foreground rounded-lg text-sm font-medium hover:text-foreground transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </button>
+          )}
+          <button
+            onClick={() => setShowForm(v => !v)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            {showForm ? 'Cancel' : 'Add / Update Stock'}
+          </button>
+        </div>
       </div>
 
       {/* Add form */}

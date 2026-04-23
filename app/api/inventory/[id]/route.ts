@@ -22,18 +22,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   // Auto-generate low_stock alert if below threshold
   const { rows: updatedRows } = await db.execute({ sql: 'SELECT * FROM inventory WHERE id = ?', args: [id] })
-  const updated = updatedRows[0] as { quantity: number; min_threshold: number; warehouse_id: number; product_id: number }
+  const updated = updatedRows[0] as unknown as { quantity: number; min_threshold: number; warehouse_id: number; product_id: number }
 
   if (updated.quantity < updated.min_threshold) {
     const { rows: alertRows } = await db.execute({
-      sql: `SELECT id FROM alerts WHERE type = 'low_stock' AND warehouse_id = ? AND product_id = ? AND resolved = 0`,
+      sql: `SELECT id FROM alerts WHERE type = 'low_stock' AND warehouse_id = ? AND product_id = ? AND is_read = 0`,
       args: [updated.warehouse_id, updated.product_id],
     })
     if (!alertRows[0]) {
       const { rows: prodRows } = await db.execute({ sql: 'SELECT name FROM products WHERE id = ?', args: [updated.product_id] })
       const { rows: whRows } = await db.execute({ sql: 'SELECT name FROM warehouses WHERE id = ?', args: [updated.warehouse_id] })
-      const pName = (prodRows[0] as { name: string }).name
-      const wName = (whRows[0] as { name: string }).name
+      const pName = (prodRows[0] as unknown as { name: string }).name
+      const wName = (whRows[0] as unknown as { name: string }).name
       await db.execute({
         sql: `INSERT INTO alerts (type, message, warehouse_id, product_id, severity) VALUES ('low_stock', ?, ?, ?, 'warning')`,
         args: [`${pName} stock below threshold at ${wName} (${updated.quantity} < ${updated.min_threshold})`, updated.warehouse_id, updated.product_id],

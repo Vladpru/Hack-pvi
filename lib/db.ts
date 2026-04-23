@@ -67,7 +67,8 @@ export async function initDb(): Promise<void> {
 
     CREATE TABLE IF NOT EXISTS requests (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      warehouse_id INTEGER NOT NULL REFERENCES warehouses(id),
+      delivery_point_id INTEGER REFERENCES delivery_points(id),
+      warehouse_id INTEGER REFERENCES warehouses(id),
       product_id INTEGER NOT NULL REFERENCES products(id),
       quantity INTEGER NOT NULL,
       priority TEXT NOT NULL DEFAULT 'normal',
@@ -85,14 +86,38 @@ export async function initDb(): Promise<void> {
       warehouse_id INTEGER REFERENCES warehouses(id),
       product_id INTEGER REFERENCES products(id),
       severity TEXT NOT NULL DEFAULT 'info',
-      resolved INTEGER NOT NULL DEFAULT 0,
+      is_read INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      action TEXT NOT NULL,
+      entity TEXT NOT NULL,
+      entity_id INTEGER,
+      details TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `)
 
+  // Migrate: add is_read if only resolved exists (old schema)
+  try {
+    await db.execute('ALTER TABLE alerts ADD COLUMN is_read INTEGER NOT NULL DEFAULT 0')
+  } catch { /* already exists */ }
+
+  // Migrate: copy resolved -> is_read if needed
+  try {
+    await db.execute('UPDATE alerts SET is_read = resolved WHERE is_read = 0 AND resolved IS NOT NULL')
+  } catch { /* no resolved column */ }
+
+  // Migrate: add delivery_point_id to requests if missing
+  try {
+    await db.execute('ALTER TABLE requests ADD COLUMN delivery_point_id INTEGER REFERENCES delivery_points(id)')
+  } catch { /* already exists */ }
+
   // Seed if empty
   const { rows } = await db.execute('SELECT COUNT(*) as count FROM warehouses')
-  const count = Number((rows[0] as { count: number }).count)
+  const count = Number((rows[0] as unknown as { count: number }).count)
   if (count > 0) { initialized = true; return }
 
   await db.executeMultiple(`
@@ -139,23 +164,23 @@ export async function initDb(): Promise<void> {
       ('Supply Junction West', 'Vinnytsia, Ukraine', 49.2331, 28.4682, '+380 44 111 0004'),
       ('Mobile Medical Unit 7', 'Kherson region', 46.6354, 32.6169, '+380 44 111 0005');
 
-    INSERT INTO requests (warehouse_id, product_id, quantity, priority, status, type, notes) VALUES
-      (1, 2, 50, 'critical', 'pending', 'emergency', 'Urgent medical supplies needed'),
-      (2, 4, 100, 'high', 'pending', 'resupply', 'Food stocks critically low'),
-      (3, 1, 200, 'normal', 'approved', 'resupply', 'Routine restock'),
-      (4, 9, 500, 'critical', 'pending', 'emergency', 'Emergency ammunition request'),
-      (5, 7, 20, 'high', 'in_transit', 'resupply', 'Fuel for vehicles'),
-      (1, 5, 10, 'normal', 'completed', 'resupply', 'Communication devices'),
-      (2, 6, 150, 'normal', 'pending', 'resupply', 'Thermal equipment for winter'),
-      (3, 10, 30, 'high', 'approved', 'resupply', 'Protective gear');
+    INSERT INTO requests (warehouse_id, delivery_point_id, product_id, quantity, priority, status, type, notes) VALUES
+      (1, 1, 2, 50, 'critical', 'pending', 'emergency', 'Urgent medical supplies needed'),
+      (2, 3, 4, 100, 'high', 'pending', 'resupply', 'Food stocks critically low'),
+      (3, 3, 1, 200, 'normal', 'approved', 'resupply', 'Routine restock'),
+      (4, 2, 9, 500, 'critical', 'pending', 'emergency', 'Emergency ammunition request'),
+      (5, 4, 7, 20, 'high', 'in_transit', 'resupply', 'Fuel for vehicles'),
+      (1, 5, 5, 10, 'normal', 'completed', 'resupply', 'Communication devices'),
+      (2, 4, 6, 150, 'normal', 'pending', 'resupply', 'Thermal equipment for winter'),
+      (3, 1, 10, 30, 'high', 'approved', 'resupply', 'Protective gear');
 
-    INSERT INTO alerts (type, message, warehouse_id, product_id, severity) VALUES
-      ('low_stock', 'First Aid Kit below minimum threshold at Central Hub Alpha', 1, 2, 'critical'),
-      ('low_stock', 'Field Ration Pack critically low at Northern Depot', 2, 4, 'critical'),
-      ('low_stock', 'Tactical Flashlight below threshold at Eastern Supply Base', 3, 1, 'warning'),
-      ('low_stock', 'Body Armor Vest low at Southern Logistics', 4, 10, 'warning'),
-      ('emergency', 'Emergency ammunition request received', 4, 9, 'critical'),
-      ('low_stock', 'Diesel Fuel below threshold at Western Forward Base', 5, 7, 'warning');
+    INSERT INTO alerts (type, message, warehouse_id, product_id, severity, is_read) VALUES
+      ('low_stock', 'First Aid Kit below minimum threshold at Central Hub Alpha', 1, 2, 'critical', 0),
+      ('low_stock', 'Field Ration Pack critically low at Northern Depot', 2, 4, 'critical', 0),
+      ('low_stock', 'Tactical Flashlight below threshold at Eastern Supply Base', 3, 1, 'warning', 0),
+      ('low_stock', 'Body Armor Vest low at Southern Logistics', 4, 10, 'warning', 0),
+      ('emergency', 'Emergency ammunition request received', 4, 9, 'critical', 0),
+      ('low_stock', 'Diesel Fuel below threshold at Western Forward Base', 5, 7, 'warning', 0);
   `)
 
   initialized = true
