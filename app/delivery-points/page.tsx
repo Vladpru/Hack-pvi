@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { MapPin, Plus, X, Phone } from 'lucide-react'
+import { MapPin, Plus, X, Phone, Map } from 'lucide-react'
+import { LocationMap, type MapMarker } from '@/components/location-map'
 
 interface DeliveryPoint {
   id: number
@@ -17,6 +18,7 @@ export default function DeliveryPointsPage() {
   const [points, setPoints] = useState<DeliveryPoint[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [showMap, setShowMap] = useState(false)
   const [form, setForm] = useState({ name: '', address: '', lat: '', lng: '', contact: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -69,13 +71,22 @@ export default function DeliveryPointsPage() {
           <h1 className="text-2xl font-bold text-foreground">Delivery Points</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage destination stops and contacts</p>
         </div>
-        <button
-          onClick={() => setShowForm(v => !v)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-          {showForm ? 'Cancel' : 'Add Delivery Point'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowMap(v => !v)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border transition-colors ${showMap ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-secondary border-border text-muted-foreground hover:text-foreground'}`}
+          >
+            <Map className="w-4 h-4" />
+            {showMap ? 'Hide Map' : 'Show Map'}
+          </button>
+          <button
+            onClick={() => setShowForm(v => !v)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            {showForm ? 'Cancel' : 'Add Delivery Point'}
+          </button>
+        </div>
       </div>
 
       {/* Form */}
@@ -121,6 +132,23 @@ export default function DeliveryPointsPage() {
             </div>
           </form>
         </div>
+      )}
+
+      {/* Map view */}
+      {showMap && !loading && points.length > 0 && (
+        <LocationMap
+          markers={points
+            .filter(p => p.lat !== 0 || p.lng !== 0)
+            .map<MapMarker>(p => ({
+              id: p.id,
+              name: p.name,
+              lat: p.lat,
+              lng: p.lng,
+              type: 'delivery_point',
+              sublabel: p.address,
+            }))}
+          height={320}
+        />
       )}
 
       {/* Grid */}

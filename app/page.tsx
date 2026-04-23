@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Warehouse, Package, MapPin, ClipboardList, AlertTriangle, Zap, RefreshCw } from 'lucide-react'
 import { StatCard } from '@/components/stat-card'
 import { PriorityBadge, StatusBadge } from '@/components/priority-badge'
+import { EmergencyRequestModal } from '@/components/emergency-request-modal'
 import { format } from 'date-fns'
 
 interface DashboardData {
@@ -41,6 +42,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [recalcLoading, setRecalcLoading] = useState(false)
   const [recalcResult, setRecalcResult] = useState<{ processed: number; actions: Array<{ request_id: number; action: string; reason: string; product_name: string; delivery_point_name: string; priority: string; quantity: number }> } | null>(null)
+  const [showEmergency, setShowEmergency] = useState(false)
 
   const load = () => {
     setLoading(true)
@@ -89,14 +91,23 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-1">Supply chain overview &amp; real-time status</p>
         </div>
-        <button
-          onClick={handleRecalculate}
-          disabled={recalcLoading}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          <RefreshCw className={`w-4 h-4 ${recalcLoading ? 'animate-spin' : ''}`} />
-          {recalcLoading ? 'Recalculating...' : 'Recalculate Supplies'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowEmergency(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-sm font-medium hover:bg-red-500/20 transition-colors"
+          >
+            <Zap className="w-4 h-4" />
+            Emergency
+          </button>
+          <button
+            onClick={handleRecalculate}
+            disabled={recalcLoading}
+            className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`w-4 h-4 ${recalcLoading ? 'animate-spin' : ''}`} />
+            {recalcLoading ? 'Recalculating...' : 'Recalculate Supplies'}
+          </button>
+        </div>
       </div>
 
       {/* Recalc result */}
@@ -139,6 +150,13 @@ export default function DashboardPage() {
           iconColor={data.stats.unreadAlerts > 0 ? 'text-amber-400' : 'text-muted-foreground'}
         />
       </div>
+
+      {showEmergency && (
+        <EmergencyRequestModal
+          onClose={() => setShowEmergency(false)}
+          onSubmitted={load}
+        />
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Low stock */}

@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { MapPin, Search, Warehouse, Package } from 'lucide-react'
+import { LocationMap, type MapMarker } from '@/components/location-map'
 
 interface ProximityResult {
   id: number
@@ -167,6 +168,41 @@ function ProximityContent() {
               <p className="text-xs text-muted-foreground">Sorted by distance</p>
             )}
           </div>
+
+          {/* Map visualisation */}
+          {!loading && (lat || lng) && (
+            (() => {
+              const mapMarkers: MapMarker[] = []
+              if (lat && lng) {
+                mapMarkers.push({
+                  id: 0,
+                  name: 'Search Origin',
+                  lat: parseFloat(lat),
+                  lng: parseFloat(lng),
+                  type: 'search',
+                  highlight: true,
+                })
+              }
+              results.forEach(w => {
+                mapMarkers.push({
+                  id: w.id,
+                  name: w.name,
+                  lat: w.lat,
+                  lng: w.lng,
+                  type: 'warehouse',
+                  highlight: true,
+                  sublabel: `${w.distance_km.toFixed(1)} km`,
+                })
+              })
+              return mapMarkers.length > 0 ? (
+                <LocationMap
+                  markers={mapMarkers}
+                  searchRadiusKm={parseFloat(radius)}
+                  height={300}
+                />
+              ) : null
+            })()
+          )}
 
           {!loading && results.length === 0 && (
             <div className="bg-card border border-border rounded-xl flex flex-col items-center justify-center py-16 gap-3">

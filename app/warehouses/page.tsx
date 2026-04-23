@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Warehouse, Plus, X, MapPin, Package, Layers } from 'lucide-react'
+import { Warehouse, Plus, X, MapPin, Package, Layers, Map } from 'lucide-react'
 import { StatCard } from '@/components/stat-card'
+import { LocationMap, type MapMarker } from '@/components/location-map'
 
 interface WarehouseItem {
   id: number
@@ -20,6 +21,7 @@ export default function WarehousesPage() {
   const [warehouses, setWarehouses] = useState<WarehouseItem[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [showMap, setShowMap] = useState(false)
   const [form, setForm] = useState({ name: '', location: '', lat: '', lng: '', capacity: '1000' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -75,13 +77,22 @@ export default function WarehousesPage() {
           <h1 className="text-2xl font-bold text-foreground">Warehouses</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage storage locations and capacity</p>
         </div>
-        <button
-          onClick={() => setShowForm(v => !v)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-          {showForm ? 'Cancel' : 'Add Warehouse'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowMap(v => !v)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border transition-colors ${showMap ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-secondary border-border text-muted-foreground hover:text-foreground'}`}
+          >
+            <Map className="w-4 h-4" />
+            {showMap ? 'Hide Map' : 'Show Map'}
+          </button>
+          <button
+            onClick={() => setShowForm(v => !v)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            {showForm ? 'Cancel' : 'Add Warehouse'}
+          </button>
+        </div>
       </div>
 
       {/* Summary stats */}
@@ -162,6 +173,23 @@ export default function WarehousesPage() {
             </div>
           </form>
         </div>
+      )}
+
+      {/* Map view */}
+      {showMap && !loading && warehouses.length > 0 && (
+        <LocationMap
+          markers={warehouses
+            .filter(w => w.lat !== 0 || w.lng !== 0)
+            .map<MapMarker>(w => ({
+              id: w.id,
+              name: w.name,
+              lat: w.lat,
+              lng: w.lng,
+              type: 'warehouse',
+              sublabel: w.location,
+            }))}
+          height={300}
+        />
       )}
 
       {/* Warehouse list */}

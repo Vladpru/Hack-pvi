@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { ClipboardList, Plus, X, Filter } from 'lucide-react'
+import { ClipboardList, Plus, X, Filter, Download } from 'lucide-react'
 import { PriorityBadge, StatusBadge } from '@/components/priority-badge'
 import { format } from 'date-fns'
 
@@ -110,6 +110,31 @@ export default function RequestsPage() {
     load()
   }
 
+  const handleExportCsv = () => {
+    const headers = ['ID', 'Product', 'SKU', 'Destination', 'Warehouse', 'Quantity', 'Unit', 'Priority', 'Status', 'Notes', 'Created']
+    const rows = requests.map(r => [
+      r.id,
+      `"${r.product_name}"`,
+      r.sku,
+      `"${r.delivery_point_name}"`,
+      `"${r.warehouse_name ?? ''}"`,
+      r.quantity,
+      r.unit,
+      r.priority,
+      r.status,
+      `"${(r.notes ?? '').replace(/"/g, '""')}"`,
+      r.created_at,
+    ])
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `requests-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const handleDelete = async (id: number) => {
     if (!confirm('Cancel this request?')) return
     await fetch(`/api/requests/${id}`, { method: 'DELETE' })
@@ -124,13 +149,24 @@ export default function RequestsPage() {
           <h1 className="text-2xl font-bold text-foreground">Supply Requests</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage and track all supply requests</p>
         </div>
-        <button
-          onClick={() => setShowForm(v => !v)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-          {showForm ? 'Cancel' : 'New Request'}
-        </button>
+        <div className="flex items-center gap-2">
+          {requests.length > 0 && (
+            <button
+              onClick={handleExportCsv}
+              className="flex items-center gap-2 px-4 py-2.5 bg-secondary border border-border text-muted-foreground rounded-lg text-sm font-medium hover:text-foreground transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </button>
+          )}
+          <button
+            onClick={() => setShowForm(v => !v)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            {showForm ? 'Cancel' : 'New Request'}
+          </button>
+        </div>
       </div>
 
       {/* Form */}
